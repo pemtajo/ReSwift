@@ -112,9 +112,8 @@ open class Store<State: StateType>: StoreType {
     open func _defaultDispatch(action: Action) {
         objc_sync_enter(self)
         let newState = reducer(action, state)
-        objc_sync_exit(self)
-
         state = newState
+        objc_sync_exit(self)
     }
 
     open func dispatch(_ action: Action) {
