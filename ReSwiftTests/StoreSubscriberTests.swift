@@ -124,13 +124,28 @@ class StoreSubscriberTests: XCTestCase {
         XCTAssertEqual(subscriber.newStateCallCount, 1)
     }
 
-    /**
-     it skips repeated state values by default when the selected substate is `Equatable`.
-     */
-    func testSkipsStateUpdatesForEquatableSubstatesByDefault() {
+    func testPassesOnDuplicateSubstateUpdatesByDefault() {
+        let reducer = TestNonEquatableReducer()
+        let state = TestNonEquatable()
+        let store = Store(reducer: reducer.handleAction, state: state)
+        let subscriber = TestFilteredSubscriber<NonEquatable>()
+
+        store.subscribe(subscriber) {
+            $0.select { $0.testValue }
+        }
+
+        XCTAssertEqual(subscriber.receivedValue.testValue, "Initial")
+
+        store.dispatch(SetNonEquatableAction(NonEquatable()))
+
+        XCTAssertEqual(subscriber.receivedValue.testValue, "Initial")
+        XCTAssertEqual(subscriber.newStateCallCount, 2)
+    }
+
+    func testPassesOnDuplicateSubstateWhenSkipsFalse() {
         let reducer = TestValueStringReducer()
         let state = TestStringAppState()
-        let store = Store(reducer: reducer.handleAction, state: state)
+        let store = Store(reducer: reducer.handleAction, state: state, middleware: [], automaticallySkipsRepeats: false)
         let subscriber = TestFilteredSubscriber<String>()
 
         store.subscribe(subscriber) {
@@ -142,13 +157,13 @@ class StoreSubscriberTests: XCTestCase {
         store.dispatch(SetValueStringAction("Initial"))
 
         XCTAssertEqual(subscriber.receivedValue, "Initial")
-        XCTAssertEqual(subscriber.newStateCallCount, 1)
+        XCTAssertEqual(subscriber.newStateCallCount, 2)
     }
 
     func testSkipsStateUpdatesForEquatableStateByDefault() {
         let reducer = TestValueStringReducer()
         let state = TestStringAppState()
-        let store = Store(reducer: reducer.handleAction, state: state)
+        let store = Store(reducer: reducer.handleAction, state: state, middleware: [])
         let subscriber = TestFilteredSubscriber<TestStringAppState>()
 
         store.subscribe(subscriber)
@@ -159,6 +174,22 @@ class StoreSubscriberTests: XCTestCase {
 
         XCTAssertEqual(subscriber.receivedValue.testValue, "Initial")
         XCTAssertEqual(subscriber.newStateCallCount, 1)
+    }
+
+    func testPassesOnDuplicateStateUpdatesInCustomizedStore() {
+        let reducer = TestValueStringReducer()
+        let state = TestStringAppState()
+        let store = Store(reducer: reducer.handleAction, state: state, middleware: [], automaticallySkipsRepeats: false)
+        let subscriber = TestFilteredSubscriber<TestStringAppState>()
+
+        store.subscribe(subscriber)
+
+        XCTAssertEqual(subscriber.receivedValue.testValue, "Initial")
+
+        store.dispatch(SetValueStringAction("Initial"))
+
+        XCTAssertEqual(subscriber.receivedValue.testValue, "Initial")
+        XCTAssertEqual(subscriber.newStateCallCount, 2)
     }
 
     func testSkipWhen() {
